@@ -1,0 +1,58 @@
+{
+  "variables": {
+    "aws_access_key": "",
+    "aws_secret_key": ""
+  },
+  "builders": [{
+    "type": "amazon-ebs",
+    "access_key": "{{user `aws_access_key`}}",
+    "secret_key": "{{user `aws_secret_key`}}",
+    "region": "eu-west-1",
+    "source_ami_filter": {
+      "filters": {
+        "name": "*ubuntu-xenial-16.04-amd64-server-*",
+        "root-device-type": "ebs",
+        "virtualization-type": "hvm"
+      },
+      "most_recent": true,
+      "owners": ["099720109477"]
+    },
+    "instance_type": "t2.micro",
+    "ssh_username": "ubuntu",
+    "ami_name": "aws-checkpoint {{timestamp | clean_ami_name}}",
+    "ami_description": "AMI test run packer",
+    "tags": {
+      "role": "checkpoint-ami"
+    },
+    "run_tags": {
+      "role": "buildSystem"
+    }
+  }],
+  "provisioners": [{
+      "type": "shell",
+      "script": "./ansible.sh"
+    },
+    {
+      "type": "file",
+      "source": "./",
+      "destination": "/tmp"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "echo '*******configuring application'",
+        "sudo ls -l /tmp/",
+        "sudo ls -a /tmp/",
+        "sudo cp /tmp/.env ~/.env",
+        "sudo ls -a ~/ ",
+        "sudo mkdir ~/App/ ",
+        "sudo ls -a ~/ ",
+        "sudo pwd"
+      ]
+    },
+    {
+      "type": "ansible-local",
+      "playbook_file": "./aws-cp-playbook.yml"
+    }
+  ]
+}

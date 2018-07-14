@@ -1,0 +1,112 @@
+---
+- hosts: all
+  remote_user: ubuntu
+  become: yes
+  become_method: sudo
+  #Variables are declared here
+  vars:
+    NODEJS_VERSION: 8
+    repo_url: https://github.com/iidrees/Events-Manager.git
+  #Tasks in this play are here 
+  tasks:
+    #Install NGINX
+    - name: Installing nginx
+      apt:
+        name: nginx
+        state: latest
+      
+    # Start the NGINX service after installation
+    - name: ensure NGINX is running
+      service:
+        name: nginx
+        state: started
+
+      # Install Nodejs
+    - name: Installing the gpg key for nodejs LTS
+      apt_key:
+        url: https://deb.nodesource.com/gpgkey/nodesource.gpg.key
+        state: present
+
+    - name: Install NODEJS LTS repos
+      apt_repository:
+        repo: "deb https://deb.nodesource.com/node_{{ NODEJS_VERSION }}.x {{ ansible_distribution_release }} main"
+        state: present
+        update_cache: yes 
+
+    - name: Installing NODEJS
+      apt: 
+        name: nodejs
+        state: present
+
+    # Clone the project repository
+    - name: Clone Github repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "/home/ubuntu/Events-Manager"
+        clone: yes
+        version: chore/deploy-on-aws/158841810
+
+    #Remove default NGINX config and replace with app config
+    - name: pre-configure NGINX removing default files
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      ignore_errors: yes
+
+    - name: check if there a previous config and deletes
+      file:
+        path: /etc/nginx/sites-available/nginx-router
+        state: absent
+      ignore_errors: yes
+
+    - name: Replace default NGINX config with user config
+      command: |
+        bash -c 'cat > /etc/nginx/sites-available/nginx-router <<EOF
+          server {
+            listen 80;
+            server_name example.com www.example.com;
+            location / {
+              proxy_pass        http://127.0.0.1:5050;
+            }
+        }
+        EOF'
+
+    - name: Create symnlink between the sites available and sites enabled dirs
+      file:
+        src: /etc/nginx/sites-available/nginx-router
+        dest: /etc/nginx/sites-enabled/nginx-router
+        state: link
+      notify:
+      - restart nginx
+
+    # Copy the .env file containing the ennv variables into the app directory
+    - name: move .env file into App Directory
+      command: cp /home/ubuntu/.env  /home/ubuntu/Events-Manager/.env
+      ignore_errors: yes
+    
+    # Install PM2 for background process running
+    - name: Install PM2
+      command: npm install -g pm2
+
+    # Install npm dependencies 
+    # run build
+    # use pm2 to startup app
+    # configure pm2 to run app as a service
+    - name: Install NPM dependencies
+      shell: |
+        export NODE_ENV=production
+        sudo npm install --unsafe-perm
+        sudo npm run build
+        echo ""
+        pm2 start npm -- start
+        pm2 startup
+        env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u ubuntu --hp /home/ubuntu
+      args:
+        chdir: /home/ubuntu/Events-Manager/
+
+  # config handlers to restart NGINX service when it has been notified above
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
