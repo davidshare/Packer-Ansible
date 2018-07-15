@@ -20,7 +20,7 @@
     "instance_type": "t2.micro",
     "ssh_username": "ubuntu",
     "ami_name": "aws-checkpoint {{timestamp | clean_ami_name}}",
-    "ami_description": "AMI test run packer",
+    "ami_description": "Create AMI for CP",
     "tags": {
       "role": "checkpoint-ami"
     },
@@ -40,14 +40,8 @@
     {
       "type": "shell",
       "inline": [
-        "echo '*******configuring application'",
-        "sudo ls -l /tmp/",
-        "sudo ls -a /tmp/",
-        "sudo cp /tmp/.env ~/.env",
-        "sudo ls -a ~/ ",
-        "sudo mkdir ~/App/ ",
-        "sudo ls -a ~/ ",
-        "sudo pwd"
+        "echo '******* Copy .env from /tmp/ to ~/ *********'",
+        "sudo cp /tmp/.env ~/.env"
       ]
     },
     {
