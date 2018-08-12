@@ -22,8 +22,8 @@ pipeline {
     }
     stage('Yum: Updates') {
       steps {
-      sh "sudo chmod +x $WORKSPACE/repo/$BUILD_SCRIPTS/scripts/ansible.sh"
-      sh "sudo $WORKSPACE/repo/$BUILD_SCRIPTS/scripts/ansible.sh"
+      sh "sudo chmod +x $WORKSPACE/repo/$BUILD_SCRIPTS/ansible.sh"
+      sh "sudo $WORKSPACE/repo/$BUILD_SCRIPTS/ansible.sh"
       }
     }
   }
